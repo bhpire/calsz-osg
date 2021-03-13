@@ -31,8 +31,8 @@ arguments  = imagedir:$Fn(input) job:$(Step) njobs:100
 transfer_executable    = False
 transfer_input_files   = bin/,dat/,$(input)
 transfer_output_remaps = "\
-	test_obs_sizes.txt=out/$Fn(input)_obs_sizes_$(Step).txt;\
-	test_frame_sizes.txt=out/$Fn(input)_frame_sizes_$(Step).txt"
+	sz_obs_sizes.txt=out/$Fn(input)_obs_sizes_$(Step).txt;\
+	sz_frame_sizes.txt=out/$Fn(input)_frame_sizes_$(Step).txt"
 
 output = log/$Fn(input)_$(Step).out
 error  = log/$Fn(input)_$(Step).err
