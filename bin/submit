@@ -1,0 +1,52 @@
+#!/usr/bin/env condor_submit
+#
+# Copyright 2020 Chi-kwan Chan
+# Copyright 2020 Steward Observatory
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you
+# may not use this file except in compliance with the License.  You
+# may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
+
+# This is a submission script for running `grmonty` on the Open
+# Science Grid with HTCondor.  It takes care file transfer, resuming,
+# and renaming.  It uses the `wrapper` script in the same "bin/"
+# directory within the `igrmonty-osg` git repository.  It can be
+# submitted normally with condor_submit:
+#
+#     condor_submit submit
+#
+# or run as a command directly `bin/submit`.
+
+executable = calsz.py
+arguments  = imagedir:$Fn(input) job:$(Step) njobs:100
+
+transfer_executable    = False
+transfer_input_files   = bin/,dat/,$(input)
+transfer_output_remaps = "\
+	test_obs_sizes.txt=out/$Fn(input)_obs_sizes_$(Step).txt;\
+	test_frame_sizes.txt=out/$Fn(input)_frame_sizes_$(Step).txt"
+
+output = log/$Fn(input)_$(Step).out
+error  = log/$Fn(input)_$(Step).err
+log    = log/$Fn(input)_$(Step).log
+
+universe       = vanilla
+request_memory = 8 GB
+request_disk   = 1 GB
+request_cpus   = 4
+
+Requirements = HAS_SINGULARITY == TRUE
++SingularityImage = "/cvmfs/singularity.opensciencegrid.org/ehtcon/theory-env:latest"
+
+on_exit_hold     = (ExitBySignal == True) || (ExitCode > 1)
+periodic_release = (NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 60)
+
+queue 100 input from bin/pargen |
