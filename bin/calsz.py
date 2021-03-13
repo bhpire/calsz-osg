@@ -14,8 +14,6 @@ from h5_to_ehtim import load_im_hdf5_frankfurt
 import numpy as np
 import joblib as jl
 import scipy.interpolate as interp
-from ruamel import yaml
-#import yaml
 
 import ehtim as eh
 import ehtim.scattering.stochastic_optics as so
@@ -374,6 +372,11 @@ if __name__=='__main__':
 
     # Load YAML input if needed
     if 'yaml' in params:
+        try:
+            from ruamel import yaml
+        except:
+            import yaml
+
         with open(params['yaml'], 'r') as f:
             data = yaml.safe_load(f)
         params.update(data)
