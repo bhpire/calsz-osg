@@ -18,6 +18,8 @@ import scipy.interpolate as interp
 import ehtim as eh
 import ehtim.scattering.stochastic_optics as so
 
+sm = so.ScatteringModel()
+
 #==============================================================================
 # Default parameters
 
@@ -108,14 +110,9 @@ def loadmov(params):
     else:
         raise Exception("simtype must be 'Illinois' or 'Frankfurt'!")
 
-    # scatter the sample images (just diffractive blur)
-    print('3. diffractive scatter GRMHD images')
-    sm = so.ScatteringModel()
-    im_list_scat = [sm.Ensemble_Average_Blur(im) for im in im_list]
-
     # merge frames into a movie
-    print('4. make GRMHD movie object')
-    mov = eh.movie.merge_im_list(im_list_scat, framedur=framedur)
+    print('3. make GRMHD movie object')
+    mov = eh.movie.merge_im_list(im_list, framedur=framedur)
 
     # shift the movie start time to coincide with the observation start
     tshift = obs_start_hr - mov.start_hr
@@ -197,17 +194,14 @@ def observe_and_norm(mov, obs_org, timeshift, seed, params):
 
     return (obs, obs_nc_norm)
 
-def rotate(mov, rotang, params):
-    if rotang == 0:
-        return mov.copy()
-    else:
-        print('rotate frames')
-        fov,  npix  = params['fov'],  int(params['npix'])
-        fovL, npixL = np.sqrt(2)*fov, int(np.sqrt(2)*npix)
-        # TODO: make faster? yes we may parallelize this
-        return eh.movie.merge_im_list([
-            mov.get_frame(i).regrid_image(fovL, npixL).rotate(rotang).regrid_image(fov, npix)
-            for i in range(mov.nframes)])
+def rotate_and_scatter(mov, rotang, params):
+    print('rotate frames')
+    fov,  npix  = params['fov'],  int(params['npix'])
+    fovL, npixL = np.sqrt(2)*fov, int(np.sqrt(2)*npix)
+    # TODO: make faster? yes we may parallelize this
+    return eh.movie.merge_im_list([
+        sm.Ensemble_Average_Blur(mov.get_frame(i).regrid_image(fovL, npixL).rotate(rotang).regrid_image(fov, npix))
+        for i in range(mov.nframes)])
 
 def calc_size_image(im):
     """directly compute the covariance matrix size from an image im"""
@@ -294,7 +288,7 @@ def main(params):
 
     iter = 0
     for rotang in rots:
-        mov = rotate(mov_org, rotang, params)
+        mov = rotate_and_scatter(mov_org, rotang, params)
         for shift, seed in product(shifts, range(1,params['nseeds']+1)):
             iter += 1
             if iter not in myrange:
