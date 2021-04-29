@@ -150,7 +150,7 @@ def observe_and_norm(mov, obs_org, timeshift, seed, params):
         mov is the input movie object
         obs_org is the reference sgra* observation
         timeshift is how much to shift the movie start time, in hours
-        seed is the random number generation seed for gains and thermal noise
+        seed is the random number generation seed for gains and thermal noise. if seed=0, no gains
     """
     mov = mov.copy()
 
@@ -159,9 +159,15 @@ def observe_and_norm(mov, obs_org, timeshift, seed, params):
         print('offset times: ', timeshift)
         mov = mov.offset_time(timeshift)
 
+    # gains or no?  
+    if seed==0:
+        ampcal=True
+    else:
+        ampcal=False
+
     # simulate observation
     print('observe')
-    obs = mov.observe_same(obs_org, ttype=params['ttype'], add_th_noise=True, ampcal=False, phasecal=False,
+    obs = mov.observe_same(obs_org, ttype=params['ttype'], add_th_noise=True, ampcal=ampcal, phasecal=False,
                            stabilize_scan_phase=True, stabilize_scan_amp=True,
                            gain_offset=params['gain_offset'], gainp=params['gainp'],
                            jones=True, inv_jones=False,
@@ -258,7 +264,9 @@ def calc_size_michael(obs):
     if s_max < s_min:
         print("maximum size estimate less than minimum size!")
 
-    return [[s_min, s_max], [s_min2, s_max2]]
+    #NOTE ORDER HAS CHANGED!
+    #return [[s_min, s_max], [s_min2, s_max2]]
+    return [[s_max, s_min], [s_max2, s_min2]]
 
 #==============================================================================
 # Main program
@@ -275,6 +283,7 @@ def main(params):
     shifts = -1 * np.linspace(0,max_shift,params['nshifts']) # shifts need to be negative!
     rots   = np.linspace(0,2*np.pi,params['nrots'])
 
+    labelarr    = []
     sizearr     = []
     sizearr_med = []
 
@@ -287,9 +296,13 @@ def main(params):
     myrange = list(range(job*each+1, (job+1)*each+1))
 
     iter = 0
-    for rotang in rots:
+    for i,rotang in enumerate(rots):
         mov = rotate_and_scatter(mov_org, rotang, params)
-        for shift, seed in product(shifts, range(1,params['nseeds']+1)):
+        #for shift, seed in product(shifts, range(1,params['nseeds']+1)):
+        for j, k in product(range(0,params['nshifts']), range(0,params['nseeds'])):
+            shift = shifts[j]
+            seed = k
+
             iter += 1
             if iter not in myrange:
                 continue
@@ -302,56 +315,25 @@ def main(params):
                 sizearr.append(size_obs[0])
                 sizearr_med.append(size_obs[1])
                 print('iteration time: ', time() - tstart)
+
+                labelarr.append(np.array([rotang, shift, seed]))
             except:
                 print('error in observation!')
                 continue
 
+    labelarr    = np.array(labelarr)
     sizearr     = np.array(sizearr)
     sizearr_med = np.array(sizearr_med)
 
-    # save the observation sampled sizes
-    outarr = np.hstack((sizearr, sizearr_med))
-    np.savetxt(params['outfile'] + '_obs_sizes.txt',outarr, fmt='%0.2f')
+    # save the observation sampled sizes 
+    # NOE: ORDER HAS CHANGED!: max1, min1, max2, min2
+    outarr = np.hstack((labelarr, sizearr, sizearr_med))
+    np.savetxt(params['outfile'] + '_obs_sizes.txt',outarr, fmt='%0.4f %0.4f %i %0.4f %0.4f %0.4f %0.4f')
 
     # save the sizes from the frames
+    # NOTE -- the sizes here in the opposite order (max, min)
     sizearr_im = np.array([calc_size_image(mov_org.get_frame(i)) for i in range(mov_org.nframes)])
     np.savetxt(params['outfile'] + '_frame_sizes.txt', sizearr_im, fmt='%0.2f')
-
-def make_size_hists(image_sizes_file, obs_sizes_file):
-    """make some plots"""
-    # get sizes of individual frames from the image domain
-    sizearr_im = np.loadtxt(images_sizes_file)
-    obsdat = np.loadtxt(obs_sizes_file)
-    sizearr_obs1 = obsdat[:,0:2]
-    sizearr_obs2 = obsdat[:,2:4]
-
-#    plt.figure(1)
-#    plt.hist(0.5*np.sqrt(sizearr_im[:,0]**2 + sizearr_im[:,1]**2),color='blue',alpha=0.75,label='Image Domain Mean Size',density=True)
-#    plt.hist(sizearr_obs1[:,0],color='green',alpha=0.75,density=True,label='EHT data min size (max)')
-#    plt.hist(sizearr_obs1[:,1],color='red',alpha=0.75,density=True,label='EHT data max size (min)')
-#    plt.xlabel(r'(uas)') 
-#    plt.legend()
-
-#    plt.figure(2)
-#    plt.hist(0.5*np.sqrt(sizearr_im[:,0]**2 + sizearr_im[:,1]**2),color='blue',alpha=0.75,label='Image Domain Mean Size',density=True)
-#    plt.hist(sizearr_obs2[:,0],color='green',alpha=0.75,density=True,label='EHT data min size (med)')
-#    plt.hist(sizearr_obs2[:,1],color='red',alpha=0.75,density=True,label='EHT data max size (med)')
-#    plt.xlabel(r'(uas)') 
-#    plt.legend()
-
-    plt.figure(3)
-    plt.hist(sizearr_im[:,0],color='blue',alpha=0.75,label='Image Domain Minor Axis',density=True)
-    plt.hist(sizearr_obs1[:,0],color='green',alpha=0.75,density=True,label='EHT data min size (Max)')
-    plt.hist(sizearr_obs2[:,0],color='red',alpha=0.75,density=True,label='EHT data min size (Med)')
-    plt.xlabel(r'(uas)') 
-    plt.legend()
-
-    plt.figure(4)
-    plt.hist(sizearr_im[:,1],color='blue',alpha=0.75,label='Image Domain Major Axis',density=True)
-    plt.hist(sizearr_obs1[:,1],color='green',alpha=0.75,density=True,label='EHT data max size (Min)')
-    plt.hist(sizearr_obs2[:,1],color='red',alpha=0.75,density=True,label='EHT data max size (Med)')
-    plt.xlabel(r'(uas)') 
-    plt.legend()
 
 
 if __name__=='__main__':
