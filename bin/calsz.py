@@ -309,8 +309,7 @@ def main(params):
     iter = 0
     for i,rotang in enumerate(rots):
         mov = rotate_and_scatter(mov_org, rotang, params)
-        #for shift, seed in product(shifts, range(1,params['nseeds']+1)):
-        for j, k in product(range(0,params['nshifts']), range(0,params['nseeds'])):
+        for j, k in product(range(params['nshifts']), range(params['nseeds'])):
             shift = shifts[j]
             seed = k
 
