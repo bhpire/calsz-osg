@@ -22,10 +22,13 @@ import ehtim.scattering.stochastic_optics as so
 # Default parameters
 
 params = {
-    'imagedir'    : '/path/to/imagedir',                                           # directory of the hdf5 movie images
+    #'imagedir'    : '/path/to/imagedir',                                           # directory of the hdf5 movie images
+    'imagedir'    : '/bd4/eht/Illinois_SgrA/230GHz/2020.02.02/',
+    'imagepath'   : 'image_Sa-0.94_*_30_*_230.e9_*_1_320_320.h5',  #*.h5           # path of filenames
     'arrayfile'   : 'EHT2017.txt',                                                 # eht array file
     'obsfile'     : 'hops_3599_SGRA_lo_V0_both_scan_netcal_normalized_10s.uvfits', # sgr a* reference data set
-    'outfile'     : 'sz', # base path for output text files, OUTFILE+'_obs_sizes.txt' and OUTFILE+'_frame_sizes.txt'
+    #'outfile'     : 'sz', # base path for output text files, OUTFILE+'_obs_sizes.txt' and OUTFILE+'_frame_sizes.txt'
+    'outfile'     : 'Sa-0.94_30_1', # base path for output text files, OUTFILE+'_obs_sizes.txt' and OUTFILE+'_frame_sizes.txt'
 
     'simtype'     : 'Illinois',         # Illinois or Frankfurt
    #'framedur'    : 98.5,               # frame duration in seconds, 5m for sgr a* -- now hardcoded with simtype
@@ -35,9 +38,9 @@ params = {
     'cachefile'   : None,
     'cacheonly'   : False,
 
-    'nshifts'     : 10, #5,  # number of time shifts
-    'nrots'       : 10, #5,  # number of rotation angles
-    'nseeds'      : 10, #10, # number of random seeds
+    'nshifts'     : 2, #5,  # number of time shifts
+    'nrots'       : 2, #5,  # number of rotation angles
+    'nseeds'      : 2, #10, # number of random seeds
 
     'tavg'        : 60,       # coherent average time
     'ttype'       : 'direct', # fourier transform type
@@ -61,7 +64,7 @@ params = {
 def loadmov(params):
 
     if params['cachefile'] is None:
-        cache = params['imagedir'].rstrip('/') + '.cache'
+        cache = params['imagedir'].rstrip('/') + '_'+params['imagepath']+ '.cache'
     else:
         cache = params['cachefile']
 
@@ -99,7 +102,7 @@ def loadmov(params):
 
     # load the sample images
     print('2. load GRMHD images')
-    image_list = np.sort(glob(params['imagedir']+'/*.h5')) # TODO -- we assume this sort puts frames in time order
+    image_list = np.sort(glob(params['imagedir']+params['imagepath'])) # TODO -- we assume this sort puts frames in time order
 
     if params['simtype']=='Illinois':
         im_list = [eh.io.load.load_im_hdf5(image).regrid_image(params['fov'], params['npix']) for image in image_list]
@@ -136,9 +139,12 @@ def loadmov(params):
     mov.dec = obs.dec
     mov.rf  = obs.rf
 
-    print('4. save cache to "{}"'.format(cache))
-    jl.dump((mov, obs, max_shift), cache)
-
+    try:
+        print('4. save cache to "{}"'.format(cache))
+        jl.dump((mov, obs, max_shift), cache)
+    except:
+        print('4. failed to save cache to "{}"!'.format(cache))
+        
     return mov, obs, max_shift
 
 #==============================================================================
@@ -215,10 +221,22 @@ def rotate_and_scatter(mov, rotang, params):
     else:
         scatter = sm.Ensemble_Average_Blur
 
-    # TODO: make faster? yes we may parallelize this
-    return eh.movie.merge_im_list([
-        scatter(mov.get_frame(i).regrid_image(fovL, npixL).rotate(rotang).regrid_image(fov, npix))
-        for i in range(mov.nframes)])
+    mjd = mov.mjd
+    times = mov.times
+
+    imlist_out =  []
+    for i in range(mov.nframes):
+        im = mov.get_frame(i)
+        im_rot = im.regrid_image(fovL, npixL).rotate(rotang).regrid_image(fov, npix)
+        im_scat = scatter(im)
+
+        # TODO -- scattering function does not preserve times!
+        im_scat.mjd =  mjd
+        im_scat.time = times[i]
+        imlist_out.append(im_scat)
+
+    mov_out = eh.movie.merge_im_list(imlist_out)
+    return mov_out
 
 def calc_size_image(im):
     """directly compute the covariance matrix size from an image im"""
