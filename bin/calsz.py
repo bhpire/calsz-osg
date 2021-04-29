@@ -136,7 +136,7 @@ def loadmov(params):
     mov.dec = obs.dec
     mov.rf  = obs.rf
 
-    print('5. save cache to "{}"'.format(cache))
+    print('4. save cache to "{}"'.format(cache))
     jl.dump((mov, obs, max_shift), cache)
 
     return mov, obs, max_shift
