@@ -18,8 +18,6 @@ import scipy.interpolate as interp
 import ehtim as eh
 import ehtim.scattering.stochastic_optics as so
 
-sm = so.ScatteringModel()
-
 #==============================================================================
 # Default parameters
 
@@ -46,6 +44,8 @@ params = {
     'nproc'       : 4,        # processes for network calibration
     'job'         : 0,
     'njobs'       : 1,
+
+    'scatter'     : True, # TODO: add scatter parameters
 
     # these synthetic data parameters come from Kotaro
     'gain_offset' : {'AA': 0.15, 'AP': 0.15, 'AZ': 0.15, 'LM': 0.6, 'PV': 0.15, 'SM': 0.15, 'JC': 0.15, 'SP': 0.15, 'SR': 0.0},
@@ -200,13 +200,24 @@ def observe_and_norm(mov, obs_org, timeshift, seed, params):
 
     return (obs, obs_nc_norm)
 
+if params['scatter']:
+    sm = so.ScatteringModel()
+else:
+    sm = None
+
 def rotate_and_scatter(mov, rotang, params):
     print('rotate frames')
     fov,  npix  = params['fov'],  int(params['npix'])
     fovL, npixL = np.sqrt(2)*fov, int(np.sqrt(2)*npix)
+
+    if sm is None:
+        scatter = lambda x: x
+    else:
+        scatter = sm.Ensemble_Average_Blur
+
     # TODO: make faster? yes we may parallelize this
     return eh.movie.merge_im_list([
-        sm.Ensemble_Average_Blur(mov.get_frame(i).regrid_image(fovL, npixL).rotate(rotang).regrid_image(fov, npix))
+        scatter(mov.get_frame(i).regrid_image(fovL, npixL).rotate(rotang).regrid_image(fov, npix))
         for i in range(mov.nframes)])
 
 def calc_size_image(im):
