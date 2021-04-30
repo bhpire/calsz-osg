@@ -37,8 +37,8 @@ params = {
     'cachefile'   : None,
     'cacheonly'   : False,
 
-    'nshifts'     : 5,  # number of time shifts
-    'nrots'       : 5,  # number of rotation angles
+    'nshifts'     : 10, # number of time shifts
+    'nrots'       : 10, # number of rotation angles
     'nseeds'      : 10, # number of random seeds
 
     'tavg'        : 60,       # coherent average time
