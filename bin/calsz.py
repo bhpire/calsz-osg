@@ -18,6 +18,8 @@ import scipy.interpolate as interp
 import ehtim as eh
 import ehtim.scattering.stochastic_optics as so
 
+sm = so.ScatteringModel()
+
 #==============================================================================
 # Default parameters
 
@@ -206,20 +208,15 @@ def observe_and_norm(mov, obs_org, timeshift, seed, params):
 
     return (obs, obs_nc_norm)
 
-if params['scatter']:
-    sm = so.ScatteringModel()
-else:
-    sm = None
-
 def rotate_and_scatter(mov, rotang, params):
     print('rotate frames')
     fov,  npix  = params['fov'],  int(params['npix'])
     fovL, npixL = np.sqrt(2)*fov, int(np.sqrt(2)*npix)
 
-    if sm is None:
-        scatter = lambda x: x
-    else:
+    if params['scatter']:
         scatter = sm.Ensemble_Average_Blur
+    else:
+        scatter = lambda x: x
 
     mjd = mov.mjd
     times = mov.times
