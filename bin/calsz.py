@@ -228,7 +228,7 @@ def rotate_and_scatter(mov, rotang, params):
     for i in range(mov.nframes):
         im = mov.get_frame(i)
         im_rot = im.regrid_image(fovL, npixL).rotate(rotang).regrid_image(fov, npix)
-        im_scat = scatter(im)
+        im_scat = scatter(im_rot)
 
         # TODO -- scattering function does not preserve times!
         im_scat.mjd =  mjd
