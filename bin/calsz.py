@@ -9,7 +9,7 @@ from sys import argv
 from glob import glob
 from time import time
 from itertools import product
-from h5_to_ehtim import load_im_hdf5_frankfurt 
+from h5_to_ehtim import load_im_hdf5_frankfurt
 
 import numpy as np
 import joblib as jl
@@ -110,7 +110,7 @@ def loadmov(params):
         im_list = [eh.io.load.load_im_hdf5(image).regrid_image(params['fov'], params['npix']) for image in image_list]
         framedur = 98.5 # seconds / frame, 5 M
     elif params['simtype']=='Frankfurt':
-        im_list = [load_im_hdf5_frankfurt(image) for image in image_list] 
+        im_list = [load_im_hdf5_frankfurt(image) for image in image_list]
         framedur = 197.0 # seconds / frame, 10 M
     else:
         raise Exception("simtype must be 'Illinois' or 'Frankfurt'!")
@@ -146,7 +146,7 @@ def loadmov(params):
         jl.dump((mov, obs, max_shift), cache)
     except:
         print('4. failed to save cache to "{}"!'.format(cache))
-        
+
     return mov, obs, max_shift
 
 #==============================================================================
@@ -167,7 +167,7 @@ def observe_and_norm(mov, obs_org, timeshift, seed, params):
         print('offset times: ', timeshift)
         mov = mov.offset_time(timeshift)
 
-    # gains or no?  
+    # gains or no?
     if seed==0:
         ampcal=True
     else:
@@ -350,7 +350,7 @@ def main(params):
     sizearr     = np.array(sizearr)
     sizearr_med = np.array(sizearr_med)
 
-    # save the observation sampled sizes 
+    # save the observation sampled sizes
     # NOE: ORDER HAS CHANGED!: max1, min1, max2, min2
     outarr = np.hstack((labelarr, sizearr, sizearr_med))
     np.savetxt(params['outfile'] + '_obs_sizes.txt',outarr, fmt='%0.4f %0.4f %i %0.4f %0.4f %0.4f %0.4f')
