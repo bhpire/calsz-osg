@@ -24,25 +24,22 @@ sm = so.ScatteringModel()
 # Default parameters
 
 params = {
-    #'imagedir'    : '/path/to/imagedir',                                           # directory of the hdf5 movie images
-    'imagedir'    : '/bd4/eht/Illinois_SgrA/230GHz/2020.02.02/',
-    'imagepath'   : 'image_Sa-0.94_*_30_*_230.e9_*_1_320_320.h5',  #*.h5           # path of filenames
-    'arrayfile'   : 'EHT2017.txt',                                                 # eht array file
-    'obsfile'     : 'hops_3599_SGRA_lo_V0_both_scan_netcal_normalized_10s.uvfits', # sgr a* reference data set
-    #'outfile'     : 'sz', # base path for output text files, OUTFILE+'_obs_sizes.txt' and OUTFILE+'_frame_sizes.txt'
-    'outfile'     : 'Sa-0.94_30_1', # base path for output text files, OUTFILE+'_obs_sizes.txt' and OUTFILE+'_frame_sizes.txt'
+    'imagedir'    : '/bd4/eht/Illinois_SgrA/230GHz/2020.02.02/', # '/path/to/imagedir', # directory of the hdf5 movie images
+    'imagepath'   : '*.h5',              # 'image_Sa-0.94_*_30_*_230.e9_*_1_320_320.h5' # path of filenames
+    'arrayfile'   : 'EHT2017.txt',                                                      # EHT array file
+    'obsfile'     : 'hops_3599_SGRA_lo_V0_both_scan_netcal_normalized_10s.uvfits',      # Sgr A* reference data set
+    'outfile'     : 'sz',                                             # 'Sa-0.94_30_1', # base path for output text files, OUTFILE+'_obs_sizes.txt' and OUTFILE+'_frame_sizes.txt'
 
     'simtype'     : 'Illinois',         # Illinois or Frankfurt
-   #'framedur'    : 98.5,               # frame duration in seconds, 5m for sgr a* -- now hardcoded with simtype
     'fov'         : 160 * eh.RADPERUAS, # field-of-view of regridded frames.
     'npix'        : 80,                 # number of pixels in regridded frames
 
     'cachefile'   : None,
     'cacheonly'   : False,
 
-    'nshifts'     : 2, #5,  # number of time shifts
-    'nrots'       : 2, #5,  # number of rotation angles
-    'nseeds'      : 2, #10, # number of random seeds
+    'nshifts'     : 5,  # number of time shifts
+    'nrots'       : 5,  # number of rotation angles
+    'nseeds'      : 10, # number of random seeds
 
     'tavg'        : 60,       # coherent average time
     'ttype'       : 'direct', # fourier transform type
@@ -66,7 +63,10 @@ params = {
 def loadmov(params):
 
     if params['cachefile'] is None:
-        cache = params['imagedir'].rstrip('/') + '_'+params['imagepath']+ '.cache'
+        cache = params['imagedir'].rstrip('/')
+        if params['imagepath'] != '*.h5':
+            cache += '_'+params['imagepath'].rstrip('.h5').replace('*', 'X')
+        cache += '.cache'
     else:
         cache = params['cachefile']
 
